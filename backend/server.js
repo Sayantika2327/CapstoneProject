@@ -8,7 +8,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 import connectDB from "./config/db.js";
 import errorHandler from "./middleware/errorHandler.js";
+
 import authRoutes from "./routes/authRoutes.js";
+import documentRoutes from "./routes/documentRoutes.js";
 
 //import connectDB from "./config/db.js";
 
@@ -50,6 +52,7 @@ app.use(
 
 // Routes
 app.use("/api/auth", authRoutes)
+app.use("/api/documents", documentRoutes);
 
 app.use(errorHandler);
 

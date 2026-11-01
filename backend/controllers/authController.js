@@ -64,7 +64,53 @@ export const register = async (req, res, next) => {
 // @access Public
 export const login = async (req, res, next) => {
     try {
-        // Login logic will be added next
+        const { email, password } = req.body;
+
+        //Validate input
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide both email and password",
+                statusCode: 400,
+            });
+        }
+
+        //Check for user(include password for comparison)
+        const user = await User.findOne({ email }).select('+password');
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid credentials",
+                statusCode: 401,
+            });
+        }
+
+        //Check if password matches
+        const isMatch = await user.matchPassword(password);
+        if (!isMatch) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid credentials",
+                statusCode: 401,
+            });
+        }
+
+        //Generate token
+        const token = generateToken(user._id);
+
+        res.status(200).json({
+            success: true,
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                profileImage: user.profileImage,
+            },
+            token,
+            message: "Login successful",
+
+        });
+
     } catch (error) {
         next(error);
     }
@@ -75,7 +121,18 @@ export const login = async (req, res, next) => {
 // @access Private
 export const getProfile = async (req, res, next) => {
     try {
-        // Profile logic will be added next
+        const user = await User.findById(req.user._id).select('-password');
+        res.status(200).json({
+            success: true,
+            data: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                profileImage: user.profileImage,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt,
+            },
+        });
     } catch (error) {
         next(error);
     }
@@ -86,7 +143,27 @@ export const getProfile = async (req, res, next) => {
 // @access Private
 export const updateProfile = async (req, res, next) => {
     try {
-        // Update logic will be added next
+        const { username, email, profileImage } = req.body;
+        const user = await User.findById(req.user._id);
+
+        if (username) user.username = username;
+        if (email) user.email = email;
+        if (profileImage) user.profileImage = profileImage;
+
+
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            data: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                profileImage: user.profileImage,
+
+            },
+            message: "Profile updated successfully",
+        });
     } catch (error) {
         next(error);
     }
@@ -97,8 +174,36 @@ export const updateProfile = async (req, res, next) => {
 // @access Private
 export const changePassword = async (req, res, next) => {
     try {
-        // Password change logic will be added next
-    } catch (error) {
+        const { currentPassword, newPassword } = req.body;
+
+        // Validate input
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                error: "Please provide both current and new password",
+                statusCode: 400,
+            });
+        }
+        const user = await User.findById(req.user._id).select('+password');
+        // Check if current password matches
+        const isMatch = await user.matchPassword(currentPassword);
+        if (!isMatch) {
+            return res.status(401).json({
+                success: false,
+                error: "Current password is incorrect",
+                statusCode: 401,
+            });
+        }
+        // Update to new password
+        user.password = newPassword;
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Password changed successfully",
+        });
+    }
+    catch (error) {
         next(error);
     }
 };
